@@ -1,3 +1,7 @@
+/*Author: Murilo Fabricio Silva
+*IC IFSP 2018
+*Example using the ADS1115 and Oled 128x32 and I2C from an Arduino Nano
+*/
 #include <Adafruit_ADS1015.h>
 #include <Arduino.h>
 #include <U8g2lib.h>
