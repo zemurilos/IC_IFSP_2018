@@ -8,3 +8,9 @@ I tried to implement an interrupt using TIMER2 from Atmega, it worked fine, this
 After I tried to implemtent a Datalogger using a SD Card while the running interrupt at the background.
 It worked well.
 After that, I made some example using I2C for the ADS1115 and SPI for the SD card.(I will test it tomorrow).
+## 2018-07-17
+Today I went to college and tested it out. I had to change some aspects to make it work as I planned before. First I had to implement the ADS 
+to read the analog signal, because those at arduino had too much noise. After that, I realized that arduino is not fast enough to do it.
+So i needed to make it slower, I was using a capacitor charging and discharging. Now I'm using PWM from arduino...
+I tried and i think that worked...
+
