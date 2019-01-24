@@ -3,7 +3,7 @@
    IC_IFSP
    Data Logger using SD card.
    Pin 9 will generate the PWM for the load.
-   The ads1115 is response for taking the current and voltage from the panel.
+   The ads1115 is responsible for taking the current and voltage from the panel.
    Hardware:
    SD Card
 
@@ -14,9 +14,12 @@
 
    > PWM - pin D9
 
-   >Pino Botão - A0 - Start com 1023 pontos
-   >Pino Botão - A1 - 255 pontos
-  
+   >Pino Botão - A0 - 100, 255 pontos
+   >Pino Botão - A1 - 500, 1023 pontos
+   >Pino Botão - A2 - Libera amostragem
+   >Pino Botão - A5 - Qual Painel - ON=4/ off=1
+
+   >A1+A0= 4095;
 */
 
 #include <SD.h>
@@ -41,10 +44,11 @@ File myFile;                           //pointer for the file
 // ---    Globals Variables   --- \\
 
 //int16_t pwmr = 4096;
-int16_t pwmr = 1023;
+//int16_t pwmr = 1023;
 //int16_t pwmr = 255;
+unsigned long time = 0;
+unsigned int pwmr;
 byte p = 1;
-unsigned int power;
 
 void dutyPwm(int16_t _pwmresolution);
 void setPwm(int16_t pwm);
@@ -72,20 +76,18 @@ void setup()
   }
 
   if (digitalRead(A1)) {
-    pwmr = 255;
+    pwmr = 4095;
     p = 1;
-  
+
     reset_bit(PORTD, PORTD4);     //
     reset_bit(PORTD, PORTD3);     //
 
   } else {
-
-    pwmr = 1023;
-    p = 0;
-
+    pwmr = 4095;
+    p = 1;
   }
 
-  ads.setGain(GAIN_ONE);  // 2/3x gain +/- 6.144V  1 bit = 3mV      0.1875mV (default)
+  ads.setGain(GAIN_TWOTHIRDS);  // 2/3x gain +/- 6.144V  1 bit = 3mV      0.1875mV (default)
   ads.begin();
   //Set how many values will gonna colect
 
@@ -96,20 +98,7 @@ void setup()
   reset_bit(PORTD, PORTD6);     //
   reset_bit(PORTD, PORTD5);     //
 
-  /*
-    if(!digitalRead(8)){
-      set_bit(PORTD, PORTD4);
-      p=0;
-    }else{
-      set_bit(PORTD, PORTD3);
-      p=1;
-      }     */
-
-  /*Serial.begin(9600);
-    while (!Serial) {  ;   }                        //Wait till the serial monitor
-
-    Serial.print("Starting SD card.....");
-  */
+  //  delay(1000);
 
   pinMode(CS_pin, OUTPUT);                        //Setup output at Chip Select
 
@@ -123,17 +112,16 @@ void setup()
   //Success
 
   set_bit(PORTD, PORTD5);//success
-
+  time=millis();
   myFile = SD.open("dados" + String(p) + ".csv", FILE_WRITE); //Open the file to write
 
 
   if (myFile)                                     //Success to open?
   { //Yes...
     myFile.println(String(p) + " Inicio " + String(pwmr) + " pontos"); //
-    myFile.println("adc1*0.125*5.78/1000, adc0*0.125*5.97, (0,001078331)V*I, Temperatura,"); // Fatores
-    myFile.println(", , , ,"); // pula linha
-    
-    myFile.println("Voltage_SOLAR_PANEL, CURRENT, POWER, Temp");// cabeçalho
+    myFile.println("1.08, 1.119/0.5,"); // pula linha
+
+    myFile.println("Voltage_SOLAR_PANEL, CURRENT");// cabeçalho
     myFile.close();
     //Serial.println(header);
   } //end if
@@ -163,8 +151,28 @@ void getdata() {
   //Get the Voltage ---------------- |
   //delay(20);
 
-  int16_t adc0, adc1, adc2;
+  int16_t adc0, adc1;
 
+  dutyPwm(pwmr);
+
+  adc0 = ads.readADC_SingleEnded(0);
+  adc1 = ads.readADC_SingleEnded(1);
+
+  if (adc0 < 0) adc0 *= 0;
+  if (myFile)
+  {
+    myFile.println(String(adc1) + ", " + String(adc0)); //Save the values
+    set_bit(PORTD, PORTD7);                             //dados
+  }
+  else
+  {
+    set_bit(PORTD, PORTD6);       //red On
+    reset_bit(PORTD, PORTD5);     //green off
+    //Serial.println("Error during the opening of file to write the final value!!"); //Error
+  }
+
+
+  pwmr = 350;
   while (pwmr > 0) {
 
     dutyPwm(pwmr);
@@ -172,28 +180,13 @@ void getdata() {
 
     adc0 = ads.readADC_SingleEnded(0);
     adc1 = ads.readADC_SingleEnded(1);
-    adc2 = ads.readADC_SingleEnded(2);
     if (adc0 < 0) adc0 *= 0;
-    delay(1);
     //voltageValue=(adc1*0.125*5.78/1000);
     //currentValue=(adc0*0.125*5.97);
 
-    //End calculation ------------------------------------------ |
-    //Writing...
-    //     if(myFile)
-    //     {
-    //        myFile.println(String(voltageValue) + ", " + String(currentValue/5.5)); //Save the values
-    //     }
-    //     else
-    //     {
-    //        Serial.println("Error during the opening of file to write the final value!!"); //Error
-    //     }
-
-    power = adc0*adc1;
-    
     if (myFile)
-    {                 //Voltage              Current              Power                     Temp
-      myFile.println(String(adc1) + ", " + String(adc0) + ", " + String(power) + ", " + String(adc2)); //Save the values
+    {
+      myFile.println(String(adc1) + ", " + String(adc0)); //Save the values
       set_bit(PORTD, PORTD7);                             //dados
     }
     else
@@ -204,18 +197,25 @@ void getdata() {
     }
 
 
-    pwmr = pwmr - 1;
-
+    pwmr = pwmr - 2;
+    if (adc0 == 0) {
+      pwmr = 0;
+    }
   }
-
+  time = millis() - time;
+  myFile.println(String(time) + ','); //Save the values
+   
   myFile.close();
-  while (pwmr == 0) {
+  while (pwmr <= 0) {
 
     set_bit(PORTD, PORTD7);             //All Led On
     set_bit(PORTD, PORTD6);
     set_bit(PORTD, PORTD5);
+    set_bit(PORTD, PORTD4);             //Led aguardando
+    set_bit(PORTD, PORTD3);             //Led aguardando
+
     while (1);
-  } //Stop the loop after the measurements
+  } //Stop the loop after 1000 measurements
 }
 
 
