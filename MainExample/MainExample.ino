@@ -62,31 +62,22 @@ void setup()
 
   pinMode(8, INPUT_PULLUP);
 
-  set_bit(DDRD, 7);             //Led dados
-  set_bit(DDRD, 6);             //Led Error
-  set_bit(DDRD, 5);             //Led OK
+  set_bit(DDRD, 7);             //Led Green
+  set_bit(DDRD, 6);             //Led Red
+  set_bit(DDRD, 5);             //Led Yellow
+  set_bit(DDRD, 4);             //Led Blue
+  set_bit(DDRD, 3);             //Led White
 
-  set_bit(DDRD, 4);             //Led OK
-  set_bit(DDRD, 3);             //Led OK
+  pwmr = 4095;
+  p = 1;
 
-  while (digitalRead(A0)) {
-    set_bit(PORTD, PORTD4);             //Led aguardando
-    set_bit(PORTD, PORTD3);             //Led aguardando
-
-  }
-
-  if (digitalRead(A1)) {
-    pwmr = 4095;
-    p = 1;
-
-    reset_bit(PORTD, PORTD4);     //
-    reset_bit(PORTD, PORTD3);     //
-
-  } else {
-    pwmr = 4095;
-    p = 1;
-  }
-
+  set_bit(PORTD, PORTD7);     //Led Green
+  set_bit(PORTD, PORTD6);     //Led Red
+  set_bit(PORTD, PORTD5);     //Led Yellow
+  set_bit(PORTD, PORTD4);     //Led Blue
+  set_bit(PORTD, PORTD3);     //Led White
+  delay(1000);
+  
   ads.setGain(GAIN_TWOTHIRDS);  // 2/3x gain +/- 6.144V  1 bit = 3mV      0.1875mV (default)
   ads.begin();
   //Set how many values will gonna colect
@@ -94,24 +85,25 @@ void setup()
   setPwm(pwmr);
   dutyPwm(pwmr);
 
-  reset_bit(PORTD, PORTD7);     //
-  reset_bit(PORTD, PORTD6);     //
-  reset_bit(PORTD, PORTD5);     //
-
-  //  delay(1000);
-
+  reset_bit(PORTD, PORTD7);     //Led Green
+  reset_bit(PORTD, PORTD6);     //Led Red
+  reset_bit(PORTD, PORTD5);     //Led Yellow
+  reset_bit(PORTD, PORTD4);     //Led Blue
+  reset_bit(PORTD, PORTD3);     //Led White
+  
   pinMode(CS_pin, OUTPUT);                        //Setup output at Chip Select
 
   if (!SD.begin(CS_pin))                          //Test opening of the SD card
   {
-    set_bit(PORTD, PORTD6);
-    //Serial.println("Failed to open the SD!");     //Error
+    set_bit(PORTD, PORTD6);     //Led Red
+    
+    //Serial.println("Failed to open the SD!");   //Error
     return;                                       //retorn
   }
 
   //Success
 
-  set_bit(PORTD, PORTD5);//success
+  set_bit(PORTD, PORT7);      //success-Green Led
   time=millis();
   myFile = SD.open("dados" + String(p) + ".csv", FILE_WRITE); //Open the file to write
 
@@ -127,8 +119,8 @@ void setup()
   } //end if
   else                                            //Nope...
   {
-    set_bit(PORTD, PORTD5);
-    set_bit(PORTD, PORTD6);
+  set_bit(PORTD, PORTD7);     //Led Green
+  set_bit(PORTD, PORTD6);     //Led Red
     //Serial.println("Error during the opening of the file...");
     //Inform about the error
   }
@@ -146,6 +138,9 @@ void loop()
 
 void getdata() {
 
+  set_bit(PORTD, PORT7);//Green
+  set_bit(PORTD, PORT5);//Yellow
+  
   File myFile = SD.open("dados" + String(p) + ".csv", FILE_WRITE); //Open the file to write
 
   //Get the Voltage ---------------- |
@@ -155,19 +150,22 @@ void getdata() {
 
   dutyPwm(pwmr);
 
-  adc0 = ads.readADC_SingleEnded(0);
-  adc1 = ads.readADC_SingleEnded(1);
-
+ // adc0 = ads.readADC_SingleEnded(0);
+  //adc1 = ads.readADC_SingleEnded(1);
+  adc0 = 0;
   if (adc0 < 0) adc0 *= 0;
   if (myFile)
   {
     myFile.println(String(adc1) + ", " + String(adc0)); //Save the values
-    set_bit(PORTD, PORTD7);                             //dados
+    set_bit(PORTD, PORTD3);                             //White
   }
   else
   {
-    set_bit(PORTD, PORTD6);       //red On
-    reset_bit(PORTD, PORTD5);     //green off
+    set_bit(PORTD, PORTD7);     //Led Green
+    set_bit(PORTD, PORTD6);     //Led Red
+    set_bit(PORTD, PORTD5);     //Led Yellow
+    set_bit(PORTD, PORTD3);     //Led White
+    
     //Serial.println("Error during the opening of file to write the final value!!"); //Error
   }
 
@@ -178,8 +176,9 @@ void getdata() {
     dutyPwm(pwmr);
 
 
-    adc0 = ads.readADC_SingleEnded(0);
-    adc1 = ads.readADC_SingleEnded(1);
+    //adc0 = ads.readADC_SingleEnded(0);
+    //adc1 = ads.readADC_SingleEnded(1);
+    adc0 = 0;
     if (adc0 < 0) adc0 *= 0;
     //voltageValue=(adc1*0.125*5.78/1000);
     //currentValue=(adc0*0.125*5.97);
@@ -187,13 +186,15 @@ void getdata() {
     if (myFile)
     {
       myFile.println(String(adc1) + ", " + String(adc0)); //Save the values
-      set_bit(PORTD, PORTD7);                             //dados
+      set_bit(PORTD, PORTD3);                             //dados
     }
     else
     {
-      set_bit(PORTD, PORTD6);       //red On
-      reset_bit(PORTD, PORTD5);     //green off
-      //Serial.println("Error during the opening of file to write the final value!!"); //Error
+      set_bit(PORTD, PORTD7);     //Led Green
+      set_bit(PORTD, PORTD6);     //Led Red
+      set_bit(PORTD, PORTD5);     //Led Yellow
+      set_bit(PORTD, PORTD4);     //Led Yellow
+      set_bit(PORTD, PORTD3);     //Led White
     }
 
 
@@ -202,18 +203,18 @@ void getdata() {
       pwmr = 0;
     }
   }
+  
   time = millis() - time;
   myFile.println(String(time) + ','); //Save the values
    
   myFile.close();
   while (pwmr <= 0) {
 
-    set_bit(PORTD, PORTD7);             //All Led On
-    set_bit(PORTD, PORTD6);
-    set_bit(PORTD, PORTD5);
-    set_bit(PORTD, PORTD4);             //Led aguardando
-    set_bit(PORTD, PORTD3);             //Led aguardando
-
+    set_bit(PORTD, PORTD7);     //Led Green
+    set_bit(PORTD, PORTD5);     //Led Yellow
+    set_bit(PORTD, PORTD4);     //Led Blue
+    set_bit(PORTD, PORTD3);     //Led White
+  
     while (1);
   } //Stop the loop after 1000 measurements
 }
