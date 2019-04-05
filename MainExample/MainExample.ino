@@ -34,21 +34,20 @@ Adafruit_ADS1115 ads;  /* Use this for the 16-bit version */
 
 #define set_bit(reg,bit)  (reg |= (1<<bit))
 #define reset_bit(reg,bit)  (reg &= ~(1<<bit))
-#define Aoff  100
-#define A0on  255
-#define A1on  500
-#define A1A0  4095
 
 File myFile;                           //pointer for the file
 
 // ---    Globals Variables   --- \\
 
-//int16_t pwmr = 4096;
+//int16_t pwmr = 32767;
+//int16_t pwmr = 16383;
+int16_t pwmr = 8191;
+//int16_t pwmr = 4095;
+//int16_t pwmr = 2047;
 //int16_t pwmr = 1023;
-//int16_t pwmr = 255;
+
 unsigned long time = 0;
-unsigned int pwmr;
-byte p = 1;
+int8_t p = 11;
 
 void dutyPwm(int16_t _pwmresolution);
 void setPwm(int16_t pwm);
@@ -57,10 +56,6 @@ void getdata();
 // --- Initials Setup ---
 void setup()
 {
-  pinMode(A0, INPUT_PULLUP);
-  pinMode(A1, INPUT_PULLUP);
-
-  pinMode(8, INPUT_PULLUP);
 
   set_bit(DDRD, 7);             //Led Green
   set_bit(DDRD, 6);             //Led Red
@@ -68,16 +63,6 @@ void setup()
   set_bit(DDRD, 4);             //Led Blue
   set_bit(DDRD, 3);             //Led White
 
-  pwmr = 4095;
-  p = 1;
-
-  set_bit(PORTD, PORTD7);     //Led Green
-  set_bit(PORTD, PORTD6);     //Led Red
-  set_bit(PORTD, PORTD5);     //Led Yellow
-  set_bit(PORTD, PORTD4);     //Led Blue
-  set_bit(PORTD, PORTD3);     //Led White
-  delay(1000);
-  
   ads.setGain(GAIN_TWOTHIRDS);  // 2/3x gain +/- 6.144V  1 bit = 3mV      0.1875mV (default)
   ads.begin();
   //Set how many values will gonna colect
@@ -90,27 +75,26 @@ void setup()
   reset_bit(PORTD, PORTD5);     //Led Yellow
   reset_bit(PORTD, PORTD4);     //Led Blue
   reset_bit(PORTD, PORTD3);     //Led White
-  
+
   pinMode(CS_pin, OUTPUT);                        //Setup output at Chip Select
 
   if (!SD.begin(CS_pin))                          //Test opening of the SD card
   {
-    set_bit(PORTD, PORTD6);     //Led Red
-    
-    //Serial.println("Failed to open the SD!");   //Error
+    set_bit(PORTD, PORTD6);
+    //Serial.println("Failed to open the SD!");     //Error
     return;                                       //retorn
   }
 
   //Success
 
-  set_bit(PORTD, PORT7);      //success-Green Led
-  time=millis();
-  myFile = SD.open("dados" + String(p) + ".csv", FILE_WRITE); //Open the file to write
+  set_bit(PORTD, PORT7);//success
+  time = millis();
+  myFile = SD.open("dadosa.csv", FILE_WRITE); //Open the file to write
 
 
   if (myFile)                                     //Success to open?
   { //Yes...
-    myFile.println(String(p) + " Inicio " + String(pwmr) + " pontos"); //
+    myFile.println(String(pwmr) + " pontos"); //
     myFile.println("1.08, 1.119/0.5,"); // pula linha
 
     myFile.println("Voltage_SOLAR_PANEL, CURRENT");// cabeçalho
@@ -119,8 +103,8 @@ void setup()
   } //end if
   else                                            //Nope...
   {
-  set_bit(PORTD, PORTD7);     //Led Green
-  set_bit(PORTD, PORTD6);     //Led Red
+    set_bit(PORTD, PORTD7);
+    set_bit(PORTD, PORTD6);
     //Serial.println("Error during the opening of the file...");
     //Inform about the error
   }
@@ -140,45 +124,40 @@ void getdata() {
 
   set_bit(PORTD, PORT7);//Green
   set_bit(PORTD, PORT5);//Yellow
-  
-  File myFile = SD.open("dados" + String(p) + ".csv", FILE_WRITE); //Open the file to write
+
+  File myFile = SD.open("dadosa.csv", FILE_WRITE); //Open the file to write
 
   //Get the Voltage ---------------- |
-  //delay(20);
 
   int16_t adc0, adc1;
 
   dutyPwm(pwmr);
+  adc0 = ads.readADC_SingleEnded(0);
+  adc1 = ads.readADC_SingleEnded(1);
 
- // adc0 = ads.readADC_SingleEnded(0);
-  //adc1 = ads.readADC_SingleEnded(1);
-  adc0 = 0;
   if (adc0 < 0) adc0 *= 0;
   if (myFile)
   {
     myFile.println(String(adc1) + ", " + String(adc0)); //Save the values
-    set_bit(PORTD, PORTD3);                             //White
+    set_bit(PORTD, PORTD3);                             //dados
   }
   else
   {
-    set_bit(PORTD, PORTD7);     //Led Green
-    set_bit(PORTD, PORTD6);     //Led Red
-    set_bit(PORTD, PORTD5);     //Led Yellow
-    set_bit(PORTD, PORTD3);     //Led White
-    
+    set_bit(PORTD, PORTD7);       //Red On
+    set_bit(PORTD, PORTD3);       //Red On
+    reset_bit(PORTD, PORTD6);     //green off
     //Serial.println("Error during the opening of file to write the final value!!"); //Error
   }
 
+  pwmr = pwmr - 3000;
 
-  pwmr = 350;
+
   while (pwmr > 0) {
 
     dutyPwm(pwmr);
 
-
-    //adc0 = ads.readADC_SingleEnded(0);
-    //adc1 = ads.readADC_SingleEnded(1);
-    adc0 = 0;
+    adc0 = ads.readADC_SingleEnded(0);
+    adc1 = ads.readADC_SingleEnded(1);
     if (adc0 < 0) adc0 *= 0;
     //voltageValue=(adc1*0.125*5.78/1000);
     //currentValue=(adc0*0.125*5.97);
@@ -186,35 +165,35 @@ void getdata() {
     if (myFile)
     {
       myFile.println(String(adc1) + ", " + String(adc0)); //Save the values
-      set_bit(PORTD, PORTD3);                             //dados
+      set_bit(PORTD, PORTD7);                             //dados
     }
     else
     {
-      set_bit(PORTD, PORTD7);     //Led Green
-      set_bit(PORTD, PORTD6);     //Led Red
-      set_bit(PORTD, PORTD5);     //Led Yellow
-      set_bit(PORTD, PORTD4);     //Led Yellow
-      set_bit(PORTD, PORTD3);     //Led White
+      set_bit(PORTD, PORTD7);       //Red On
+      set_bit(PORTD, PORTD3);       //White On
+      reset_bit(PORTD, PORTD5);     //green off
     }
 
-
-    pwmr = pwmr - 2;
+    if(adc1>70) p=1;
+    
+    pwmr = pwmr - p;
+    
     if (adc0 == 0) {
       pwmr = 0;
     }
   }
-  
   time = millis() - time;
   myFile.println(String(time) + ','); //Save the values
-   
+
   myFile.close();
   while (pwmr <= 0) {
 
-    set_bit(PORTD, PORTD7);     //Led Green
-    set_bit(PORTD, PORTD5);     //Led Yellow
-    set_bit(PORTD, PORTD4);     //Led Blue
-    set_bit(PORTD, PORTD3);     //Led White
-  
+    reset_bit(PORTD, PORTD7);             //All Led On
+    //set_bit(PORTD, PORTD6);
+    set_bit(PORTD, PORTD5);
+    set_bit(PORTD, PORTD4);             //Led aguardando
+    set_bit(PORTD, PORTD3);             //Led aguardando
+
     while (1);
   } //Stop the loop after 1000 measurements
 }
