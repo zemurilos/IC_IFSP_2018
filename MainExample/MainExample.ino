@@ -149,7 +149,7 @@ void getdata() {
     //Serial.println("Error during the opening of file to write the final value!!"); //Error
   }
 
-  pwmr = pwmr - 3000;
+  pwmr = pwmr - 2200;
 
 
   while (pwmr > 0) {
@@ -174,10 +174,10 @@ void getdata() {
       reset_bit(PORTD, PORTD5);     //green off
     }
 
-    if(adc1>70) p=1;
-    
+    if (adc1 > 70) p = 1;
+
     pwmr = pwmr - p;
-    
+
     if (adc0 == 0) {
       pwmr = 0;
     }
